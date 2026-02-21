@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 400;
+            margin-bottom: 30px;
+            color: #000;
+            letter-spacing: -0.5px;
+        }
+
+        .input-group {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px 20px;
+            border: none;
+            font-size: 16px;
+            outline: none;
+            border-bottom: 1px solid #eee;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #000;
+            color: white;
+            border: none;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #333;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            width: 80px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .value {
+            flex: 1;
+            color: #000;
+        }
+
+        .value a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .value a:hover {
+            text-decoration: underline;
+        }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            width: auto;
+            color: #666;
+        }
+
+        .copy-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat {
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 500;
+            color: #000;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>URL Shortener</h1>
+        
+        <div class="input-group">
+            <input type="url" id="urlInput" placeholder="Paste your long URL here" value="https://example.com">
+            <button onclick="shortenUrl()" id="shortenBtn">
+                <span id="btnText">Shorten</span>
+                <span id="btnSpinner" class="spinner" style="display: none;"></span>
+            </button>
+        </div>
+
+        <div class="result" id="result">
+            <div class="result-item">
+                <span class="label">Short URL</span>
+                <span class="value" id="shortUrl"></span>
+                <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+            </div>
+            <div class="result-item">
+                <span class="label">Original</span>
+                <span class="value" id="longUrl"></span>
+            </div>
+            <div class="result-item">
+                <span class="label">Created</span>
+                <span class="value" id="createdAt"></span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number" id="totalUrls">0</div>
+                <div class="stat-label">URLs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="totalClicks">0</div>
+                <div class="stat-label">Clicks</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="successRate">100%</div>
+                <div class="stat-label">Uptime</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+
+        async function shortenUrl() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) return;
+
+            const btn = document.getElementById('shortenBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'inline-block';
+
+            try {
+                const response = await fetch(`${API_BASE}/shorten`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ longUrl: url })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('shortUrl').innerHTML = `<a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a>`;
+                    document.getElementById('longUrl').textContent = data.longUrl;
+                    document.getElementById('createdAt').textContent = new Date(data.createdAt).toLocaleString();
+                    document.getElementById('result').classList.add('show');
+                    
+                    loadStats();
+                }
+            } catch (error) {
+                alert('Error shortening URL');
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/urls/all`);
+                const urls = await response.json();
+                
+                document.getElementById('totalUrls').textContent = urls.length;
+                document.getElementById('totalClicks').textContent = urls.reduce((sum, u) => sum + u.clicks, 0);
+            } catch (error) {
+                console.error('Error loading stats');
+            }
+        }
+
+        function copyToClipboard() {
+            const shortUrl = document.querySelector('#shortUrl a').href;
+            navigator.clipboard.writeText(shortUrl);
+            alert('Copied!');
+        }
+
+        loadStats();
+    </script>
+</body>
+</html>

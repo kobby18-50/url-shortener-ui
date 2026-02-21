@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>url.sh — terminal style</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #00ff00;
+        }
+
+        .terminal {
+            width: 800px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            box-shadow: 0 20px 40px rgba(0,255,0,0.1);
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: #2a2a2a;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .terminal-title {
+            color: #999;
+            font-size: 12px;
+            margin-left: auto;
+        }
+
+        .terminal-body {
+            padding: 30px;
+        }
+
+        .prompt {
+            color: #00ff00;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .prompt::before {
+            content: '$ ';
+            color: #00ff00;
+        }
+
+        .command {
+            color: #fff;
+            margin-bottom: 30px;
+            font-size: 24px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .input-line span {
+            color: #00ff00;
+        }
+
+        .input-line input {
+            flex: 1;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            padding: 12px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .input-line input:focus {
+            border-color: #00ff00;
+        }
+
+        .input-line button {
+            background: #2a2a2a;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 12px 24px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .input-line button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .output {
+            background: #2a2a2a;
+            padding: 20px;
+            border-left: 3px solid #00ff00;
+            display: none;
+        }
+
+        .output.show {
+            display: block;
+        }
+
+        .output-line {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #fff;
+        }
+
+        .output-line .key {
+            color: #00ff00;
+            width: 80px;
+            display: inline-block;
+        }
+
+        .output-line a {
+            color: #fff;
+            text-decoration: none;
+            border-bottom: 1px dashed #00ff00;
+        }
+
+        .output-line a:hover {
+            color: #00ff00;
+        }
+
+        .stats {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background: #2a2a2a;
+            font-size: 14px;
+        }
+
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            border-right: 1px solid #333;
+        }
+
+        .stat-item:last-child {
+            border-right: none;
+        }
+
+        .stat-value {
+            color: #00ff00;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 20px;
+            background: #00ff00;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .success-message {
+            color: #00ff00;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-dot dot-red"></div>
+            <div class="terminal-dot dot-yellow"></div>
+            <div class="terminal-dot dot-green"></div>
+            <div class="terminal-title">url.sh — bash</div>
+        </div>
+        <div class="terminal-body">
+            <div class="prompt">Last login: <span id="timestamp"></span></div>
+            <div class="command">url.sh — URL shortener</div>
+            
+            <div class="input-line">
+                <span>$</span>
+                <input type="text" id="urlInput" placeholder="Enter URL to shorten..." value="https://example.com">
+                <button onclick="shortenUrl()">↵</button>
+            </div>
+
+            <div class="output" id="output">
+                <div class="output-line">
+                    <span class="key">status:</span> success
+                </div>
+                <div class="output-line">
+                    <span class="key">short:</span> <a href="#" id="shortUrl" target="_blank"></a>
+                </div>
+                <div class="output-line">
+                    <span class="key">original:</span> <span id="longUrl"></span>
+                </div>
+                <div class="output-line">
+                    <span class="key">created:</span> <span id="createdAt"></span>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalUrls">0</div>
+                    <div class="stat-label">total urls</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalClicks">0</div>
+                    <div class="stat-label">total clicks</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgClicks">0</div>
+                    <div class="stat-label">avg/clicks</div>
+                </div>
+            </div>
+
+            <div class="success-message" id="successMsg">
+                ✓ URL shortened successfully
+            </div>
+            <div class="cursor"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+
+        async function shortenUrl() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/shorten`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ longUrl: url })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('shortUrl').textContent = data.shortUrl;
+                    document.getElementById('shortUrl').href = data.shortUrl;
+                    document.getElementById('longUrl').textContent = data.longUrl;
+                    document.getElementById('createdAt').textContent = new Date(data.createdAt).toLocaleString();
+                    document.getElementById('output').classList.add('show');
+                    
+                    const successMsg = document.getElementById('successMsg');
+                    successMsg.classList.add('show');
+                    setTimeout(() => successMsg.classList.remove('show'), 3000);
+                    
+                    loadStats();
+                }
+            } catch (error) {
+                alert('Error');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/urls/all`);
+                const urls = await response.json();
+                
+                const totalUrls = urls.length;
+                const totalClicks = urls.reduce((sum, u) => sum + u.clicks, 0);
+                const avgClicks = totalUrls ? Math.round(totalClicks / totalUrls) : 0;
+                
+                document.getElementById('totalUrls').textContent = totalUrls;
+                document.getElementById('totalClicks').textContent = totalClicks;
+                document.getElementById('avgClicks').textContent = avgClicks;
+            } catch (error) {
+                console.error('Error');
+            }
+        }
+
+        loadStats();
+
+        // Enter key
+        document.getElementById('urlInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') shortenUrl();
+        });
+    </script>
+</body>
+</html>
