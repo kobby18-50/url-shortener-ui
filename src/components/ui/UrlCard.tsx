@@ -1,12 +1,11 @@
 import { ClipboardCopy, ExternalLink, Eye, Trash } from 'lucide-react'
 import { Card, CardContent, CardFooter } from './card'
 import type { ShortenUrl } from '@/interfaces'
-import axios from 'axios'
-import { useState } from 'react'
 import { Spinner } from './spinner'
 import { toast } from 'sonner'
 import { copyToClipboard } from '@/lib/copyToClipboard'
-import { BASE_URL } from '@/baseUrl'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { deleteUrl } from '../api-helpers'
 
 type URLCardProp = {
   url: ShortenUrl
@@ -14,22 +13,22 @@ type URLCardProp = {
 
 const URLCard = ({ url }: URLCardProp) => {
   const { clicks, longUrl, shortUrl, shortCode } = url
-  const [isLoading, setLoading] = useState(false)
+
+  const queryClient = useQueryClient()
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: deleteUrl,
+    onSuccess: () => {
+      toast.success('Url deleted')
+      queryClient.invalidateQueries({ queryKey: ['urls'] })
+    },
+    onError: () => {
+      toast.error('Errror deleting url')
+    },
+  })
 
   const handleDelete = async (shortCode: string) => {
-    setLoading(true)
-    await axios
-      .delete(`${BASE_URL}/${shortCode}`)
-      .then((res) => {
-        console.log(res)
-        setLoading(false)
-        toast.success('Url deleted')
-      })
-      .catch((err) => {
-        console.log(err)
-        setLoading(false)
-        toast.success('Errror deleting url')
-      })
+    mutate(shortCode)
   }
   return (
     <Card>
@@ -37,7 +36,11 @@ const URLCard = ({ url }: URLCardProp) => {
         <p>{longUrl}</p>
 
         <div className='flex gap-x-2 items-center '>
-          <a target='_blank' className='font-semibold flex items-center gap-2' href={shortUrl}>
+          <a
+            target='_blank'
+            className='font-semibold flex items-center gap-2'
+            href={shortUrl}
+          >
             <span className='text-[#009dff]'>{shortUrl.substring(0, 30)}</span>
             <span>
               <ExternalLink size={15} className='text-[#fe611d]' />
@@ -56,12 +59,20 @@ const URLCard = ({ url }: URLCardProp) => {
         </span>
 
         <span className='flex gap-x-3'>
-          <button className='hover:cursor-pointer' onClick={() => copyToClipboard(shortUrl)}><ClipboardCopy size={15} /></button>
+          <button
+            className='hover:cursor-pointer'
+            onClick={() => copyToClipboard(shortUrl)}
+          >
+            <ClipboardCopy size={15} />
+          </button>
 
-          {isLoading ? (
+          {isPending ? (
             <Spinner />
           ) : (
-            <button className='hover:cursor-pointer' onClick={() => handleDelete(shortCode)}>
+            <button
+              className='hover:cursor-pointer'
+              onClick={() => handleDelete(shortCode)}
+            >
               <Trash className='text-red-900' size={15} />
             </button>
           )}
