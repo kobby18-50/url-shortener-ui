@@ -33,7 +33,7 @@ const URLCard = ({ url }: URLCardProp) => {
   return (
     <Card>
       <CardContent className='flex flex-col gap-5'>
-        <p>{longUrl.substring(0,20)}</p>
+        <p>{longUrl.substring(0,30)}</p>
 
         <div className='flex gap-x-2 items-center '>
           <a
